@@ -17,6 +17,7 @@ constraint -delete -all
 cutpoint -show -all
 constraint -add -pin rst 0
 
+constraint -add static_buff.assume_select_prt_stable_check
 constraint -add static_buff.assume_pop_en_check
 constraint -add static_buff.assume_push_en_check
 constraint -show -all
