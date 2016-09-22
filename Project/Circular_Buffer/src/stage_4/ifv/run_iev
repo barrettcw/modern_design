@@ -1,0 +1,1 @@
+iev +64bit -f filelist +licq +top+static_buff +define+FORMAL  +tcl+formal_check.tcl -l formal_check.log   +gui
