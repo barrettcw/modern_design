@@ -1,1 +1,6 @@
 ../rtl/static_buff.v
+../../../../lib/mem_1r1w.v
+../../../../lib/mem_2r1w.v
+../../../../lib/mem_2r2w.v
+../../../../lib/shift.v
+

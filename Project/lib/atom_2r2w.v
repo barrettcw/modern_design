@@ -40,7 +40,6 @@ input  [BITADDR-1:0]  select_adr;
 `ifdef FORMAL
 assign ready = !rst;
 
-wire [BITDATA-1:0] fake_0, fake_1;
 wire               read_0_del, read_1_del;
 wire [BITADDR-1:0] rd_adr_0_del, rd_adr_1_del;
 shift #(.BITDATA(1+BITADDR), .DELAY(SRAM_DELAY)) delay_0(.clk(clk), .din({read_0,rd_adr_0}), .dout({read_0_del,rd_adr_0_del}));
@@ -56,8 +55,8 @@ generate if(FORMAL_FULL) begin : full_formal
       if (write_2) mem[wr_adr_2] <= wr_din_2;
       if (write_3) mem[wr_adr_3] <= wr_din_3;
     end
-  assign rd_dout_0 = read_0_del ? mem[rd_adr_0_del] : fake_0;
-  assign rd_dout_1 = read_1_del ? mem[rd_adr_1_del] : fake_1;
+  assume_mem_dout_0_check: assume property (@(posedge clk) disable iff(rst) read_0_del |-> rd_dout_0 == mem[rd_adr_0_del]);
+  assume_mem_dout_1_check: assume property (@(posedge clk) disable iff(rst) read_1_del |-> rd_dout_1 == mem[rd_adr_1_del]);
 end
 else begin : select_formal
   reg [BITDATA-1:0] mem;
@@ -68,8 +67,8 @@ else begin : select_formal
       if (write_2 && (wr_adr_2==select_adr)) mem <= wr_din_2;
       if (write_3 && (wr_adr_3==select_adr)) mem <= wr_din_3;
     end
-  assign rd_dout_0 = (read_0_del && (rd_adr_0_del==select_adr)) ? mem : fake_0;
-  assign rd_dout_1 = (read_1_del && (rd_adr_1_del==select_adr)) ? mem : fake_1;
+  assume_mem_dout_0_check: assume property (@(posedge clk) disable iff(rst) read_0_del && rd_adr_0_del==select_adr |-> rd_dout_0 == mem);
+  assume_mem_dout_1_check: assume property (@(posedge clk) disable iff(rst) read_1_del && rd_adr_1_del==select_adr |-> rd_dout_1 == mem);
 end
 endgenerate
 

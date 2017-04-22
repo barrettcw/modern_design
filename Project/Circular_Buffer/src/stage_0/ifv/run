@@ -1,0 +1,2 @@
+vlog -sv +define+FORMAL -f filelist
+qverify -c -do formal.do

@@ -104,9 +104,9 @@ always_comb begin
     ref_cnt_nxt = ref_cnt_nxt + 1;
   end
 end
-assume_select_prt_stable_check: assert property (@(posedge clk) disable iff(rst) $stable(select_prt) && select_prt < NUMFIFO);
-assume_pop_en_check: assert property (@(posedge clk) disable iff(rst) pop && po_prt==select_prt |-> (ref_cnt > 0)); 
-assume_push_en_check: assert property (@(posedge clk) disable iff(rst) push && pu_prt==select_prt |-> (ref_cnt < NUMELEM)); 
+assume_select_prt_stable_check: assume property (@(posedge clk) disable iff(rst) $stable(select_prt) && select_prt < NUMFIFO);
+assume_pop_en_check: assume property (@(posedge clk) disable iff(rst) pop && po_prt==select_prt |-> (ref_cnt > 0)); 
+assume_push_en_check: assume property (@(posedge clk) disable iff(rst) push && pu_prt==select_prt |-> (ref_cnt < NUMELEM)); 
 
 assert_po_dout_check: assert property (@(posedge clk) disable iff(rst) pop && po_prt == select_prt |-> po_dout == ref_fifo[0]); 
 

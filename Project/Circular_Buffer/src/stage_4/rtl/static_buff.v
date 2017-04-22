@@ -48,30 +48,34 @@ shift #(.BITDATA(1+BITFIFO), .DELAY(QPT_DELAY))
 
 wire [BITELEM-1:0] pu_head;
 wire [BITELEM-1:0] po_head;
+wire [BITELEM-1:0] po_head_nxt = (po_head+1)%NUMELEM;
 atom_2r1w #(.NUMADDR(NUMFIFO), .BITADDR(BITFIFO), .BITDATA(BITELEM), .RSTINIT(1), .SRAM_DELAY(QPT_DELAY))
   head_inst (.clk(clk), .rst(rst), .ready(head_ready), .select_adr(select_prt),
              .read_0(push), .rd_adr_0(pu_prt), .rd_dout_0(pu_head),
              .read_1(pop),  .rd_adr_1(po_prt), .rd_dout_1(po_head),
-             .write_2(pop_del), .wr_adr_2(po_prt_del), .wr_din_2((po_head+1)%NUMELEM));
+             .write_2(pop_del), .wr_adr_2(po_prt_del), .wr_din_2(po_head_nxt));
 
 
 wire conflict = push_del && pop_del && (pu_prt_del == po_prt_del);
 wire [BITELEM  :0] pu_cnt;
 wire [BITELEM  :0] po_cnt;
+wire [BITELEM  :0] pu_cnt_nxt=pu_cnt+1;
+wire [BITELEM  :0] po_cnt_nxt=po_cnt-1;
 atom_2r2w #(.NUMADDR(NUMFIFO), .BITADDR(BITFIFO), .BITDATA(BITELEM+1), .RSTINIT(1), .SRAM_DELAY(QPT_DELAY))
   cnt_inst (.clk(clk), .rst(rst), .ready(cnt_ready), .select_adr(select_prt),
              .read_0(push),  .rd_adr_0(pu_prt), .rd_dout_0(pu_cnt),
              .read_1(pop),   .rd_adr_1(po_prt), .rd_dout_1(po_cnt),
-             .write_2(push_del && !conflict), .wr_adr_2(pu_prt_del), .wr_din_2(pu_cnt+1),
-             .write_3(pop_del  && !conflict), .wr_adr_3(po_prt_del), .wr_din_3(po_cnt-1));
+             .write_2(push_del && !conflict), .wr_adr_2(pu_prt_del), .wr_din_2(pu_cnt_nxt),
+             .write_3(pop_del  && !conflict), .wr_adr_3(po_prt_del), .wr_din_3(po_cnt_nxt));
 
 
 wire [BITELEM-1:0] pu_tail = (pu_head+pu_cnt)%NUMELEM;
-
+wire [BITADDR-1:0] po_dat_adr = po_prt_del*NUMELEM+po_head;
+wire [BITADDR-1:0] pu_dat_adr = pu_prt_del*NUMELEM+pu_tail;
 mem_1r1w #(.NUMADDR(NUMADDR), .BITADDR(BITADDR), .BITDATA(BITDATA), .FORMAL_FULL(1), .SRAM_DELAY(DAT_DELAY))
-  data_inst (.clk(clk), .rst(rst), .ready(data_ready),
-             .read_0(pop_del),   .rd_adr_0(po_prt_del*NUMELEM+po_head), .rd_dout_0(po_dout),
-             .write_1(push_del), .wr_adr_1(pu_prt_del*NUMELEM+pu_tail), .wr_din_1(pu_din_del));
+  data_inst (.clk(clk), .rst(rst), .ready(data_ready), .select_adr(),
+             .read_0(pop_del),   .rd_adr_0(po_dat_adr), .rd_dout_0(po_dout),
+             .write_1(push_del), .wr_adr_1(pu_dat_adr), .wr_din_1(pu_din_del));
 
 
 `ifdef FORMAL
@@ -108,13 +112,13 @@ always_comb begin
     ref_cnt_nxt = ref_cnt_nxt + 1;
   end
 end
-assume_select_prt_stable_check: assert property (@(posedge clk) disable iff(rst) $stable(select_prt) && select_prt < NUMFIFO);
-assume_pop_en_check: assert property (@(posedge clk) disable iff(rst) pop && po_prt==select_prt |-> (ref_cnt > 0)); 
-assume_push_en_check: assert property (@(posedge clk) disable iff(rst) push && pu_prt==select_prt |-> (ref_cnt < NUMELEM)); 
+assume_select_prt_stable_check: assume property (@(posedge clk) disable iff(rst) $stable(select_prt) && select_prt < NUMFIFO);
+assume_pop_en_check: assume property (@(posedge clk) disable iff(rst) pop && po_prt==select_prt |-> (ref_cnt > 0)); 
+assume_push_en_check: assume property (@(posedge clk) disable iff(rst) push && pu_prt==select_prt |-> (ref_cnt < NUMELEM)); 
 
 
 wire [BITDATA-1:0] ref_dout;
-zt_stl_shift #(.BITDATA(BITDATA), .DELAY(POP_DELAY)) ref_dout_inst (.clk(clk), .din(ref_fifo[0]), .dout(ref_dout));
+shift #(.BITDATA(BITDATA), .DELAY(POP_DELAY)) ref_dout_inst (.clk(clk), .din(ref_fifo[0]), .dout(ref_dout));
 assert_po_dout_check: assert property (@(posedge clk) disable iff(rst) pop && po_prt==select_prt |-> ##POP_DELAY po_dout == ref_dout);
 
 `endif

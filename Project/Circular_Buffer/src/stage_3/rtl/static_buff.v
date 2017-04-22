@@ -32,30 +32,34 @@ assign ready = head_ready && cnt_ready && data_ready;
 
 wire [BITELEM-1:0] pu_head;
 wire [BITELEM-1:0] po_head;
+wire [BITELEM-1:0] po_head_nxt = (po_head+1)%NUMELEM;
 mem_2r1w #(.NUMADDR(NUMFIFO), .BITADDR(BITFIFO), .BITDATA(BITELEM), .RSTINIT(1))
   head_inst (.clk(clk), .rst(rst), .ready(head_ready), .select_adr(select_prt),
              .read_0(push), .rd_adr_0(pu_prt), .rd_dout_0(pu_head),
              .read_1(pop),  .rd_adr_1(po_prt), .rd_dout_1(po_head),
-             .write_2(pop), .wr_adr_2(po_prt), .wr_din_2((po_head+1)%NUMELEM));
+             .write_2(pop), .wr_adr_2(po_prt), .wr_din_2(po_head_nxt));
 
 
 wire conflict = push && pop && (pu_prt == po_prt);
 wire [BITELEM  :0] pu_cnt;
 wire [BITELEM  :0] po_cnt;
+wire [BITELEM  :0] pu_cnt_nxt=pu_cnt+1;
+wire [BITELEM  :0] po_cnt_nxt=po_cnt-1;
 mem_2r2w #(.NUMADDR(NUMFIFO), .BITADDR(BITFIFO), .BITDATA(BITELEM+1), .RSTINIT(1))
   cnt_inst (.clk(clk), .rst(rst), .ready(cnt_ready), .select_adr(select_prt),
              .read_0(push),  .rd_adr_0(pu_prt), .rd_dout_0(pu_cnt),
              .read_1(pop),   .rd_adr_1(po_prt), .rd_dout_1(po_cnt),
-             .write_2(push && !conflict), .wr_adr_2(pu_prt), .wr_din_2(pu_cnt+1),
-             .write_3(pop  && !conflict), .wr_adr_3(po_prt), .wr_din_3(po_cnt-1));
+             .write_2(push && !conflict), .wr_adr_2(pu_prt), .wr_din_2(pu_cnt_nxt),
+             .write_3(pop  && !conflict), .wr_adr_3(po_prt), .wr_din_3(po_cnt_nxt));
 
 
 wire [BITELEM-1:0] pu_tail = (pu_head+pu_cnt)%NUMELEM;
-
+wire [BITADDR-1:0] po_dat_adr = po_prt*NUMELEM+po_head;
+wire [BITADDR-1:0] pu_dat_adr = pu_prt*NUMELEM+pu_tail;
 mem_1r1w #(.NUMADDR(NUMADDR), .BITADDR(BITADDR), .BITDATA(BITDATA), .FORMAL_FULL(1))
-  data_inst (.clk(clk), .rst(rst), .ready(data_ready),
-             .read_0(pop), .rd_adr_0(po_prt*NUMELEM+po_head), .rd_dout_0(po_dout),
-             .write_1(push), .wr_adr_1(pu_prt*NUMELEM+pu_tail), .wr_din_1(pu_din));
+  data_inst (.clk(clk), .rst(rst), .ready(data_ready), .select_adr(),
+             .read_0(pop), .rd_adr_0(po_dat_adr), .rd_dout_0(po_dout),
+             .write_1(push), .wr_adr_1(pu_dat_adr), .wr_din_1(pu_din));
 
 
 
@@ -93,9 +97,9 @@ always_comb begin
     ref_cnt_nxt = ref_cnt_nxt + 1;
   end
 end
-assume_select_prt_stable_check: assert property (@(posedge clk) disable iff(rst) $stable(select_prt) && select_prt < NUMFIFO);
-assume_pop_en_check: assert property (@(posedge clk) disable iff(rst) pop && po_prt==select_prt |-> (ref_cnt > 0)); 
-assume_push_en_check: assert property (@(posedge clk) disable iff(rst) push && pu_prt==select_prt |-> (ref_cnt < NUMELEM)); 
+assume_select_prt_stable_check: assume property (@(posedge clk) disable iff(rst) $stable(select_prt) && select_prt < NUMFIFO);
+assume_pop_en_check: assume property (@(posedge clk) disable iff(rst) pop && po_prt==select_prt |-> (ref_cnt > 0)); 
+assume_push_en_check: assume property (@(posedge clk) disable iff(rst) push && pu_prt==select_prt |-> (ref_cnt < NUMELEM)); 
 
 assert_po_dout_check: assert property (@(posedge clk) disable iff(rst) pop && po_prt == select_prt |-> po_dout == ref_fifo[0]); 
 

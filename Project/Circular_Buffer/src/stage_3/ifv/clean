@@ -1,0 +1,1 @@
+rm -rf *.db *.log *.rpt qcache qverify_cmds.tcl .qverify_ui_local_prefs .visualizer work .qfverify_mpi_abort

@@ -78,8 +78,8 @@ always_comb begin
   end
 end
 
-assume_pop_en_check: assert property (@(posedge clk) disable iff(rst) pop |-> (ref_cnt > 0)); 
-assume_push_en_check: assert property (@(posedge clk) disable iff(rst) push |-> (ref_cnt < NUMELEM)); 
+assume_pop_en_check: assume property (@(posedge clk) disable iff(rst) pop |-> (ref_cnt > 0)); 
+assume_push_en_check: assume property (@(posedge clk) disable iff(rst) push |-> (ref_cnt < NUMELEM)); 
 
 assert_po_dout_check: assert property (@(posedge clk) disable iff(rst) pop |-> po_dout == ref_fifo[0]); 
 
